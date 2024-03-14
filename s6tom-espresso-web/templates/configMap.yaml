@@ -1,0 +1,7 @@
+# configMap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.appName }}
+data:
+  {{ .Values.labels.app }}: {{ .Values.labels.version | quote }}

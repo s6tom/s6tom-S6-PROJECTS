@@ -1,0 +1,11 @@
+# File: values.yaml
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.appName }}-config
+data:
+  POSTGRESQL_HOST: {{ .Values.configMap.POSTGRESQL_HOST | quote }}
+  POSTGRESQL_PORT: {{ .Values.configMap.POSTGRESQL_PORT | quote }}  
+  POSTGRESQL_DATABASE: {{ .Values.configMap.POSTGRESQL_DATABASE | quote }}
+

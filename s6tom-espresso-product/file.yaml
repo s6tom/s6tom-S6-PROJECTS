@@ -1,0 +1,146 @@
+NAME: frontend
+LAST DEPLOYED: Thu Jan 25 16:40:54 2024
+NAMESPACE: default
+STATUS: pending-install
+REVISION: 1
+TEST SUITE: None
+HOOKS:
+MANIFEST:
+---
+# Source: s6tom-espresso-product/templates/pdb.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: s6tom-espresso-product
+  labels: 
+    app: s6tom-espresso-product
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: v1
+---
+# Source: s6tom-espresso-product/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: s6tom-espresso-product
+---
+# Source: s6tom-espresso-product/templates/secret.yaml
+# File: templates/secret.yaml
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: s6tom-espresso-product-secret
+type: Opaque
+data:
+  # Base64-encoded values
+  POSTGRESQL_USER: cG9zdGdyZXNxbA==
+  POSTGRESQL_PASSWORD: cG9zdGdyZXM=
+---
+# Source: s6tom-espresso-product/templates/cm.yaml
+# File: values.yaml
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: s6tom-espresso-product-config
+data:
+  POSTGRESQL_HOST: "postgresql-ha"
+  POSTGRESQL_PORT: "9187"  
+  POSTGRESQL_DATABASE: "postgresql-db"
+---
+# Source: s6tom-espresso-product/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: s6tom-espresso-product-svc
+  labels:
+    app: s6tom-espresso-product
+    version: v1
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8091
+      targetPort: 80
+      protocol: TCP
+      name: http
+  selector:
+    version: v1
+---
+# Source: s6tom-espresso-product/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: s6tom-espresso-product
+  labels:
+    app: s6tom-espresso-product
+spec:
+  selector:
+    matchLabels:
+      version: v1
+  template:
+    metadata:
+      labels:
+        version: v1
+    spec:
+      serviceAccountName: s6tom-espresso-product
+      securityContext:
+        {}
+      containers:
+        - name: s6tom-espresso-product
+          securityContext:
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+          image: "s6tom/docker-repo:espresso-shop-product-v1.0.0"
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          envFrom:
+          - configMapRef:
+              name: s6tom-espresso-product
+          - secretRef:
+              name: s6tom-espresso-product 
+          resources:
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+# Source: s6tom-espresso-product/templates/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: s6tom-espresso-product
+  labels: 
+    app: s6tom-espresso-product
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: s6tom-espresso-product
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+NOTES:
+1. Get the application URL by running these commands:
+  export POD_NAME=$(kubectl get pods --namespace default -l "app.kubernetes.io/name=s6tom-espresso-product,app.kubernetes.io/instance=frontend" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace default $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace default port-forward $POD_NAME 8080:$CONTAINER_PORT
