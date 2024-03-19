@@ -3,7 +3,7 @@ kind: Pod
 metadata:
   name: "{{ .Values.appName }}-test-connection"
   labels:
-    {{ .Values.labels.app }}
+    app: {{ .Values.labels.app }}
   annotations:
     "helm.sh/hook": test
 spec:
